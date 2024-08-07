@@ -8,6 +8,11 @@ case $- in
       *) return;;
 esac
 
+# Detect WSL environment
+is_wsl() {
+    grep -qEi "(Microsoft|WSL)" /proc/version &>/dev/null
+}
+
 # don't put duplicate lines or lines starting with space in the history.
 # See bash(1) for more options
 HISTCONTROL=ignoreboth
@@ -117,13 +122,17 @@ if ! shopt -oq posix; then
 fi
 
 # pnpm
-export PNPM_HOME="/home/mohammadxali/.local/share/pnpm"
+export PNPM_HOME="/home/$USER/.local/share/pnpm"
 export PATH="$PNPM_HOME:$PATH"
 # pnpm end
 
-# https://stackoverflow.com/a/67938487/6622233
-PATH=$(echo "$PATH" | sed -e 's%:/mnt/c/Program Files/nodejs%%') 
-PATH=$(echo "$PATH" | sed -e 's%:/mnt/c/Users/Mohammad/AppData/Roaming/npm%%') 
+if is_wsl; then
+    WINDOWS_USER=$(/mnt/c/Windows/System32/cmd.exe /c 'echo %USERNAME%' 2>/dev/null | sed -e 's/\r//g')
+
+    # https://stackoverflow.com/a/67938487/6622233
+    PATH=$(echo "$PATH" | sed -e 's%:/mnt/c/Program Files/nodejs%%')
+    PATH=$(echo "$PATH" | sed -e "s%:/mnt/c/Users/$WINDOWS_USER/AppData/Roaming/npm%%")
+fi
 
 # https://github.com/sindresorhus/guides/blob/main/npm-global-without-sudo.md
 NPM_PACKAGES="${HOME}/.npm-packages"
