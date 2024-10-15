@@ -9,7 +9,7 @@ To set up your environment with these dotfiles, follow these steps:
 1. Clone the repository to your home directory:
 
     ```sh
-    git clone https://github.com/MohammadxAli/dotfiles.git ~/dotfiles
+    git clone https://github.com/mohammadxali/dotfiles.git ~/dotfiles
     ```
 
 2. Navigate to the `dotfiles` directory:
