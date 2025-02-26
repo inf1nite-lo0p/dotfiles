@@ -13,6 +13,11 @@ case $- in
       *) return;;
 esac
 
+# Enable tab completion for `g` by marking it as an alias for `git`
+if type _git &> /dev/null; then
+	complete -o default -o nospace -F _git g;
+fi;
+
 # Detect WSL environment
 is_wsl() {
     grep -qEi "(Microsoft|WSL)" /proc/version &>/dev/null
