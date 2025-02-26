@@ -122,8 +122,11 @@ if ! shopt -oq posix; then
 fi
 
 # pnpm
-export PNPM_HOME="/home/$USER/.local/share/pnpm"
-export PATH="$PNPM_HOME:$PATH"
+export PNPM_HOME="/home/mohammadxali/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
 # pnpm end
 
 if is_wsl; then
@@ -159,3 +162,4 @@ export NVM_DIR="$HOME/.nvm"
 
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 alias sail='[ -f sail ] && bash sail || bash vendor/bin/sail'
+eval "$(direnv hook bash)"
