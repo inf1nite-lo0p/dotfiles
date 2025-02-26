@@ -1,9 +1,9 @@
 [core]
 
     # Make VSCode default editor when operating with Git
-	editor = code --wait
+    editor = code --wait
 
 [init]
 
     # Change default branch name from `master` to `main`
-	defaultBranch = main
+    defaultBranch = main
