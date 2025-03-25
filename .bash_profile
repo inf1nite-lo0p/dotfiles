@@ -130,12 +130,9 @@ if ! shopt -oq posix; then
   fi
 fi
 
-# Pnpm
-export PNPM_HOME="/home/mohammadxali/.local/share/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
+# PNPM (use latest global install)
+export PNPM_HOME="$HOME/.local/share/pnpm"
+export PATH="$PNPM_HOME:$PATH"
 
 if is_wsl; then
     WINDOWS_USER=$(/mnt/c/Windows/System32/cmd.exe /c 'echo %USERNAME%' 2>/dev/null | sed -e 's/\r//g')
