@@ -169,3 +169,8 @@ function o() {
 function tre() {
 	tree -aC -I '.git|node_modules|bower_components' --dirsfirst "$@" | less -FRNX;
 }
+
+# Detect WSL environment
+function is_wsl() {
+    grep -qEi "(Microsoft|WSL)" /proc/version &>/dev/null
+}

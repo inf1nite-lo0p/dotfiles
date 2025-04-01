@@ -18,11 +18,6 @@ if type _git &> /dev/null; then
 	complete -o default -o nospace -F _git g;
 fi;
 
-# Detect WSL environment
-is_wsl() {
-    grep -qEi "(Microsoft|WSL)" /proc/version &>/dev/null
-}
-
 # Don't put duplicate lines or lines starting with space in the history.
 HISTCONTROL=ignoreboth
 
