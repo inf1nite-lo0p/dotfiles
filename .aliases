@@ -39,3 +39,8 @@ alias ips="ifconfig -a | grep -o 'inet6\? \(addr:\)\?\s\?\(\(\([0-9]\+\.\)\{3\}[
 
 # Print each PATH entry on a separate line
 alias path='echo -e ${PATH//:/\\n}'
+
+# https://github.com/e6a5/zenta
+alias breath='zenta now --quick'
+alias breathe='zenta now'
+alias reflect='zenta reflect'
