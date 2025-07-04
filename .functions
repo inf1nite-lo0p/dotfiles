@@ -174,3 +174,30 @@ function tre() {
 function is_wsl() {
     grep -qEi "(Microsoft|WSL)" /proc/version &>/dev/null
 }
+
+# A simple remote IP checker with multiple backends
+ip() {
+  case "$1" in
+    ""|default|ipinfo|a)
+      json=$(curl -4s https://ipinfo.io/json)
+
+      ip=$(echo "$json" | jq -r '.ip')
+      city=$(echo "$json" | jq -r '.city')
+      region=$(echo "$json" | jq -r '.region')
+      country=$(echo "$json" | jq -r '.country')
+
+      echo "IP: $ip ($city, $region, $country)"
+      ;;
+    ifconfig|ifconfig.me|b)
+      ip=$(curl -4s ifconfig.me)
+      echo "IP: ${ip:-unavailable}"
+      ;;
+    icanhazip|c)
+      ip=$(curl -4s https://icanhazip.com)
+      echo "IP: ${ip:-unavailable}"
+      ;;
+    *)
+      echo "Unknown option. Use: ip [a|b|c|ipinfo|ifconfig|icanhazip]"
+      ;;
+  esac
+}
