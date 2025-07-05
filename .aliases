@@ -43,3 +43,6 @@ alias path='echo -e ${PATH//:/\\n}'
 alias breath='zenta now --quick'
 alias breathe='zenta now'
 alias reflect='zenta reflect'
+
+# https://github.com/casey/just
+alias j="just"
