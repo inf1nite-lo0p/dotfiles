@@ -1,34 +1,34 @@
-# Load PATH and environment setup
+# 1. Load PATH and environment setup
 [ -f ~/.paths ] && source ~/.paths
 
-# Load the shell dotfiles, and then some:
-for file in ~/.{aliases,bash_logout,functions,extra,completions}; do
-	[ -r "$file" ] && [ -f "$file" ] && source "$file"
+# 2. Load aliases, functions, and extras
+for file in ~/.{aliases,bash_logout,functions,extra}; do
+  [ -r "$file" ] && [ -f "$file" ] && source "$file"
 done
 unset file
 
-# If not running interactively, don't do anything
+# 3. If not running interactively, don't do anything
 case $- in
     *i*) ;;
       *) return;;
 esac
 
-# History behavior
+# 4. History behavior
 HISTCONTROL=ignoreboth
 shopt -s histappend
 HISTSIZE=1000
 HISTFILESIZE=2000
 
-# Terminal tweaks
+# 5. Terminal tweaks
 shopt -s checkwinsize
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
-# Chroot awareness
+# 6. Chroot awareness
 if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
   debian_chroot=$(cat /etc/debian_chroot)
 fi
 
-# Prompt styling
+# 7. Prompt styling
 case "$TERM" in
   xterm-color|*-256color) color_prompt=yes ;;
 esac
@@ -48,23 +48,26 @@ else
 fi
 unset color_prompt force_color_prompt
 
-# Terminal window title for xterm
+# 8. Terminal title for xterm
 case "$TERM" in
   xterm*|rxvt*)
     PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
     ;;
 esac
 
-# Shell behavior
+# 9. Shell behavior
 set -o vi
 
-# Starship prompt
+# 10. Starship prompt
 eval "$(starship init bash)"
 
-# nvm (after PATH is set)
+# 11. Load nvm (must be before completions)
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-# Auto-start tmux
+# 12. Load completions (after tools are loaded)
+[ -f ~/.completions ] && source ~/.completions
+
+# 13. Auto-start tmux
 if command -v tmux &>/dev/null && [ -z "$TMUX" ]; then
   tmux attach -t main || tmux new -s main
 fi
