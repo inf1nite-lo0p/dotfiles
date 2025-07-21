@@ -2,13 +2,14 @@
 
 cd "$(dirname "${BASH_SOURCE}")";
 
-git pull origin main;
-
 function doIt() {
 	rsync --exclude ".git/" \
 		--exclude "setup.sh" \
 		--exclude "README.md" \
 		-avh --no-perms . ~;
+
+	ln -sf "$(pwd)/tmux.conf" ~/.tmux.conf
+
 	source ~/.bash_profile;
 }
 

@@ -150,3 +150,10 @@ eval "$(direnv hook bash)"
 # https://kubernetes.io/docs/reference/kubectl/quick-reference/#bash
 source <(kubectl completion bash)
 complete -o default -F __start_kubectl k
+
+export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+
+# Auto-start tmux if not already in tmux
+if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
+  tmux attach -t main || tmux new -s main
+fi
