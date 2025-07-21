@@ -162,12 +162,37 @@ function o() {
 	fi;
 }
 
-# `tre` is a shorthand for `tree` with hidden files and color enabled, ignoring
-# the `.git` directory, listing directories first. The output gets piped into
-# `less` with options to preserve color and line numbers, unless the output is
-# small enough for one screen.
+# `tre` is a shorthand for `tree` with hidden files enabled,
+# ignoring common clutter directories and showing directories first.
+# By default, it displays in a pager with colors.
+# Use `-o <file>` to save plain output to a file instead.
 function tre() {
-	tree -aC -I '.git|node_modules|bower_components' --dirsfirst "$@" | less -FRNX;
+    local outfile=""
+    local args=()
+    local tre_ignore='.git|node_modules|bower_components|coverage|.turbo|dist'
+
+    # Parse args: look for -o <filename>
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -o)
+                shift
+                outfile="$1"
+                ;;
+            *)
+                args+=("$1")
+                ;;
+        esac
+        shift
+    done
+
+    if [[ -n "$outfile" ]]; then
+        # No -C: disable color when writing to file
+        tree -a -I "$tre_ignore" --dirsfirst "${args[@]}" > "$outfile"
+        echo "Output saved to $outfile"
+    else
+        # Use color when outputting to terminal
+        tree -aC -I "$tre_ignore" --dirsfirst "${args[@]}" | less -FRNX
+    fi
 }
 
 # Detect WSL environment
