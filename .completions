@@ -1,0 +1,26 @@
+# Enable programmable completion features (you don't need to enable
+# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
+# sources /etc/bash.bashrc).
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+
+# This loads nvm bash_completion
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+# Git completion (Debian/Ubuntu)
+if [ -f /usr/share/bash-completion/completions/git ]; then
+    source /usr/share/bash-completion/completions/git
+elif [ -f ~/.git-completion.bash ]; then
+    source ~/.git-completion.bash
+fi
+
+# Kubectl completion
+if command -v kubectl &> /dev/null; then
+    source <(kubectl completion bash)
+    complete -o default -F __start_kubectl k
+fi
