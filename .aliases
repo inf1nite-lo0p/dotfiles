@@ -45,3 +45,6 @@ alias path='echo -e ${PATH//:/\\n}'
 alias breath='zenta now --quick'
 alias breathe='zenta now'
 alias reflect='zenta reflect'
+
+# Laravel Sail alias
+alias sail='[ -f sail ] && bash sail || bash vendor/bin/sail'

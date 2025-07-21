@@ -1,0 +1,34 @@
+# Core user bin
+export PATH="$HOME/bin:$PATH"
+
+# PNPM global install path
+export PNPM_HOME="$HOME/.local/share/pnpm"
+export PATH="$PNPM_HOME:$PATH"
+
+# npm global path (no sudo)
+export NPM_PACKAGES="$HOME/.npm-packages"
+export PATH="$PATH:$NPM_PACKAGES/bin"
+
+# Add Bun to path
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+# Laravel Sail (via Linuxbrew)
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+# Krew (kubectl plugin manager)
+export KREW_ROOT="${KREW_ROOT:-$HOME/.krew}"
+export PATH="$KREW_ROOT/bin:$PATH"
+
+# nvm path only (actual load of nvm.sh happens later)
+export NVM_DIR="$HOME/.nvm"
+
+# Windows Subsystem for Linux cleanup
+if command -v is_wsl &>/dev/null && is_wsl; then
+  WINDOWS_USER=$(/mnt/c/Windows/System32/cmd.exe /c 'echo %USERNAME%' 2>/dev/null | sed -e 's/\r//g')
+  PATH=$(echo "$PATH" | sed -e 's%:/mnt/c/Program Files/nodejs%%')
+  PATH=$(echo "$PATH" | sed -e "s%:/mnt/c/Users/$WINDOWS_USER/AppData/Roaming/npm%%")
+fi
+
+# Preserve MANPATH if it exists; otherwise use default
+export MANPATH="${MANPATH-$(manpath)}:$NPM_PACKAGES/share/man"
