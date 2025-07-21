@@ -145,3 +145,8 @@ export NVM_DIR="$HOME/.nvm"
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 alias sail='[ -f sail ] && bash sail || bash vendor/bin/sail'
 eval "$(direnv hook bash)"
+
+# Auto-complete for "kubectl" and "k" alias in bash
+# https://kubernetes.io/docs/reference/kubectl/quick-reference/#bash
+source <(kubectl completion bash)
+complete -o default -F __start_kubectl k
