@@ -66,8 +66,3 @@ eval "$(starship init bash)"
 
 # 12. Load completions (after tools are loaded)
 [ -f ~/.completions ] && source ~/.completions
-
-# 13. Auto-start tmux
-if command -v tmux &>/dev/null && [ -z "$TMUX" ]; then
-  tmux attach -t main || tmux new -s main
-fi
