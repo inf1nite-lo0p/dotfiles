@@ -56,6 +56,17 @@
     # Find commits by commit message
     fm = "!f() { git log --pretty=format:'%C(yellow)%h  %Cblue%ad  %Creset%s%Cgreen  [%cn] %Cred%d' --decorate --date=short --grep=$1; }; f"
 
+    # Preview PR commits (oldest → newest), excluding merges
+    pr-preview = "!f() { \
+        git rev-list --reverse --no-merges \"$1^1..$1^2\" \
+        | xargs -I{} git --no-pager log -n1 --oneline {}; \
+    }; f"
+
+    # Cherry-pick PR commits (oldest → newest), excluding merges
+    pr-cherry = "!f() { \
+        git cherry-pick $(git rev-list --reverse --no-merges \"$1^1..$1^2\"); \
+    }; f"
+
     # Remove branches that have already been merged with main.
     # a.k.a. ‘delete merged’
     dm = "!git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
