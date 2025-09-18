@@ -79,9 +79,9 @@
 
     # Count files that are visible to Git (tracked + untracked, excluding .gitignored and submodule gitlinks).
     # Usage:
-    #   git count-files            # repo root (.)
-    #   git count-files path/pkg   # a specific folder
-    count-files = "!f() { \
+    #   git count            # repo root (.)
+    #   git count path/pkg   # a specific folder
+    count = "!f() { \
         dir=\"${1:-.}\"; \
         tracked=$(git ls-files -s -- \"$dir\" | awk '$1 != 160000 {print $0}' | wc -l | tr -d ' '); \
         others=$(git ls-files --others --exclude-standard -- \"$dir\" | wc -l | tr -d ' '); \
