@@ -162,14 +162,29 @@ function o() {
 	fi;
 }
 
-# `tre` is a shorthand for `tree` with hidden files enabled,
-# ignoring common clutter directories and showing directories first.
-# By default, it displays in a pager with colors.
-# Use `-o <file>` to save plain output to a file instead.
+# tre — handy tree wrapper
+#
+# Examples:
+#   tre                    # full tree (with colors in pager), ignores clutter
+#   tre -L 1 -d            # folders only, depth = 1
+#   tre -L 2               # files + folders, depth = 2
+#   tre --prune            # hide dirs that end up empty after filtering
+#   tre -L 1 -d --prune    # folders only, depth = 1, pruned
+#   tre -o structure.txt   # write plain output to file (no color)
+#   tre src -L 2           # limit to "src" directory
+#
+# Flags passed through to `tree`:
+#   -L <n>   max depth
+#   -d       directories only
+#   --prune  hide empty dirs after -I filtering
+#   -o <f>   (tre-only) save to file (disables color)
+#
+# Ignore pattern (built-in):
+#   .git|node_modules|bower_components|coverage|.turbo|dist|playwright-report|test-results|.next
 function tre() {
     local outfile=""
     local args=()
-    local tre_ignore='.git|node_modules|bower_components|coverage|.turbo|dist'
+    local tre_ignore='.git|node_modules|bower_components|coverage|.turbo|dist|playwright-report|test-results|.next'
 
     # Parse args: look for -o <filename>
     while [[ $# -gt 0 ]]; do
