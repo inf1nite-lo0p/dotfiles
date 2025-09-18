@@ -226,3 +226,17 @@ ip() {
       ;;
   esac
 }
+
+# count: Count files in a Git repo while respecting .gitignore.
+#
+# Examples:
+#   count                       # count all files in repo
+#   count packages/app          # count files in a folder
+#   count . '*.ts' '*.tsx'      # count TypeScript files in repo root
+#   count packages/lib '*.tsx'  # count only .tsx files in a folder
+count() {
+  dir="${1:-.}"; shift || :
+  tracked=$(git -C "$dir" ls-files -s -- "$@" | awk '$1 != 160000' | wc -l | tr -d ' ')
+  others=$(git -C "$dir" ls-files --others --exclude-standard -- "$@" | wc -l | tr -d ' ')
+  echo $((tracked + others))
+}
