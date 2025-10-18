@@ -71,6 +71,9 @@
     # a.k.a. ‘delete merged’
     dm = "!git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
 
+    # Delete all local branches except `main` and `develop`
+    da = "!git branch --format='%(refname:short)' | grep -vE '^(main|develop)$' | xargs -r git branch -D"
+
     # List contributors with number of commits.
     contributors = shortlog --summary --numbered
 
