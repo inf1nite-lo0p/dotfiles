@@ -56,14 +56,18 @@
     # Find commits by commit message
     fm = "!f() { git log --pretty=format:'%C(yellow)%h  %Cblue%ad  %Creset%s%Cgreen  [%cn] %Cred%d' --decorate --date=short --grep=$1; }; f"
 
-    # Preview PR commits (oldest → newest), excluding merges
-    pr-preview = "!f() { \
+    # Preview commits introduced by a merge commit (oldest → newest), excluding merges
+    # Usage: git merge-preview <MERGE_COMMIT_SHA>
+    # Example: git merge-preview abc1234     # Shows commits that were merged in abc1234 (like from a PR)
+    merge-preview = "!f() { \
         git rev-list --reverse --no-merges \"$1^1..$1^2\" \
         | xargs -I{} git --no-pager log -n1 --oneline {}; \
     }; f"
 
-    # Cherry-pick PR commits (oldest → newest), excluding merges
-    pr-cherry = "!f() { \
+    # Cherry-pick commits introduced by a merge commit (oldest → newest), excluding merges
+    # Usage: git merge-cherry <MERGE_COMMIT_SHA>
+    # Example: git merge-cherry abc1234      # Cherry-picks the commits that were merged in abc1234
+    merge-cherry = "!f() { \
         git cherry-pick $(git rev-list --reverse --no-merges \"$1^1..$1^2\"); \
     }; f"
 
