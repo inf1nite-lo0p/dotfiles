@@ -186,6 +186,36 @@ function tre() {
     local args=()
     local tre_ignore='.git|node_modules|bower_components|coverage|.turbo|dist|playwright-report|test-results|.next'
 
+    # Help text
+    local help_text=$(cat <<'EOF'
+tre — handy tree wrapper
+
+Examples:
+  tre                    # full tree (with colors in pager), ignores clutter
+  tre -L 1 -d            # folders only, depth = 1
+  tre -L 2               # files + folders, depth = 2
+  tre --prune            # hide dirs that end up empty after filtering
+  tre -L 1 -d --prune    # folders only, depth = 1, pruned
+  tre -o structure.txt   # write plain output to file (no color)
+  tre src -L 2           # limit to "src" directory
+
+Flags passed through to `tree`:
+  -L <n>   max depth
+  -d       directories only
+  --prune  hide empty dirs after -I filtering
+  -o <f>   (tre-only) save to file (disables color)
+
+Ignore pattern (built-in):
+  .git|node_modules|bower_components|coverage|.turbo|dist|playwright-report|test-results|.next
+EOF
+)
+
+    # Check for help flag
+    if [[ "$1" == "--help" || "$1" == "-h" ]]; then
+        echo "$help_text"
+        return 0
+    fi
+
     # Parse args: look for -o <filename>
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -212,20 +242,70 @@ function tre() {
 
 # Detect WSL environment
 function is_wsl() {
+    # Help text
+    local help_text=$(cat <<'EOF'
+is_wsl — Detect if the current environment is Windows Subsystem for Linux (WSL).
+
+Usage:
+  is_wsl            # returns success (0) if running in WSL, else failure (1)
+  is_wsl --help     # show this help message
+  is_wsl -h         # show this help message
+
+Example:
+  if is_wsl; then
+      echo "Running on WSL"
+  else
+      echo "Not running on WSL"
+  fi
+EOF
+)
+
+    # Check for help flag
+    if [[ "$1" == "--help" || "$1" == "-h" ]]; then
+        echo "$help_text"
+        return 0
+    fi
+
     grep -qEi "(Microsoft|WSL)" /proc/version &>/dev/null
 }
 
 # A simple remote IP checker with multiple backends
 ip() {
+  # Help text
+  local help_text=$(cat <<'EOF'
+ip — Fetch your public IP address using different backends.
+
+Usage:
+  ip [backend]
+  ip --help
+  ip -h
+
+Backends:
+  a | ipinfo     Use https://ipinfo.io/json (default, shows location info)
+  b | ifconfig   Use https://ifconfig.me
+  c | icanhazip  Use https://icanhazip.com
+
+Examples:
+  ip             # default (ipinfo)
+  ip a           # ipinfo backend
+  ip b           # ifconfig backend
+  ip c           # icanhazip backend
+EOF
+)
+
+  # Check for help flag
+  if [[ "$1" == "--help" || "$1" == "-h" ]]; then
+      echo "$help_text"
+      return 0
+  fi
+
   case "$1" in
     ""|default|ipinfo|a)
       json=$(curl -4s https://ipinfo.io/json)
-
       ip=$(echo "$json" | jq -r '.ip')
       city=$(echo "$json" | jq -r '.city')
       region=$(echo "$json" | jq -r '.region')
       country=$(echo "$json" | jq -r '.country')
-
       echo "IP: $ip ($city, $region, $country)"
       ;;
     ifconfig|ifconfig.me|b)
@@ -250,8 +330,32 @@ ip() {
 #   count . '*.ts' '*.tsx'      # count TypeScript files in repo root
 #   count packages/lib '*.tsx'  # count only .tsx files in a folder
 count() {
-  dir="${1:-.}"; shift || :
-  tracked=$(git -C "$dir" ls-files -s -- "$@" | awk '$1 != 160000' | wc -l | tr -d ' ')
-  others=$(git -C "$dir" ls-files --others --exclude-standard -- "$@" | wc -l | tr -d ' ')
+  # Help text
+  local help_text=$(cat <<'EOF'
+count — Count files in a Git repository (respects .gitignore).
+
+Usage:
+  count [dir] [patterns...]
+  count --help
+  count -h
+
+Examples:
+  count                       # count all files in repo
+  count packages/app          # count files in a folder
+  count . '*.ts' '*.tsx'      # count TypeScript files in repo root
+  count packages/lib '*.tsx'  # count only .tsx files in a folder
+EOF
+)
+
+  # Check for help flag
+  if [[ "$1" == "--help" || "$1" == "-h" ]]; then
+      echo "$help_text"
+      return 0
+  fi
+
+  local dir="${1:-.}"
+  shift || :
+  local tracked=$(git -C "$dir" ls-files -s -- "$@" | awk '$1 != 160000' | wc -l | tr -d ' ')
+  local others=$(git -C "$dir" ls-files --others --exclude-standard -- "$@" | wc -l | tr -d ' ')
   echo $((tracked + others))
 }
