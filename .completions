@@ -1,3 +1,18 @@
+# Detect absolute path to this .completions file
+_DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Justfile completion setup
+if command -v just &>/dev/null; then
+  _DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  _JUST_COMPLETIONS="$_DOTFILES_DIR/.just-completion.bash"
+  if [ ! -s "$_JUST_COMPLETIONS" ]; then
+    just --completions bash > "$_JUST_COMPLETIONS"
+  fi
+  source "$_JUST_COMPLETIONS"
+  alias j=just
+  complete -F _just -o default j
+fi
+
 # Load bash completion core
 if ! shopt -oq posix; then
   if [ -f /usr/share/bash-completion/bash_completion ]; then

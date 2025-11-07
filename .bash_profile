@@ -66,3 +66,7 @@ eval "$(starship init bash)"
 
 # 12. Load completions (after tools are loaded)
 [ -f ~/.completions ] && source ~/.completions
+
+# 13. Enable auto-complete for just tasks
+source ~/.just-completion.bash
+complete -F _just -o default j
