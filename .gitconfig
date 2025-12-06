@@ -95,6 +95,16 @@
         echo $((tracked + others)); \
     }; f"
 
+    # Resolve all 'deleted by us' merge conflicts (DU) by deleting those files.
+    resolve-du = "!f() { \
+        files=$(git status --porcelain | grep '^DU ' | sed 's/^DU //'); \
+        if [ -n \"$files\" ]; then \
+            echo \"$files\" | xargs git rm; \
+        else \
+            echo 'No DU (deleted-by-us) conflicts found.'; \
+        fi; \
+    }; f"
+
 [core]
 
     # Make VSCode default editor when operating with Git
