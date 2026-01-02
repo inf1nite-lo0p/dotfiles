@@ -359,3 +359,210 @@ EOF
   local others=$(git -C "$dir" ls-files --others --exclude-standard -- "$@" | wc -l | tr -d ' ')
   echo $((tracked + others))
 }
+
+# chat_chunks — Split big text into ChatGPT-friendly parts with headers.
+#
+# Usage:
+#   chat_chunks <file> [--max-chars N] [--out DIR | --tmp] [--prefix TEXT] [--mode ack|final] [--print]
+#   <cmd> | chat_chunks --stdin [--max-chars N] [--out DIR | --tmp] [--prefix TEXT] [--mode ack|final] [--print]
+#
+# Options:
+#   --stdin            Read input from stdin instead of a file
+#   --max-chars N      Max bytes per chunk (default: 80000)
+#   --out DIR          Write chunks to a directory (default: ./chunks-YYYYmmdd-HHMMSS)
+#   --tmp              Write chunks under /tmp/chat-chunks/run-YYYYmmdd-HHMMSS and print full paths (yek-style)
+#   --prefix TEXT      Header prefix (default: 'This is PART X of Y.')
+#   --mode ack|final   ack   => do not analyze, reply with acknowledgement (default)
+#                     final => last chunk signals 'ALL PARTS SENT'
+#   --print            Print chunks to stdout instead of writing files
+#
+# Notes:
+# - Uses `split -C` (fast, native) and respects line boundaries (won't split mid-line).
+# - Limit is bytes (not tokens). If you paste huge parts or lots of code, reduce --max-chars for safety.
+# - When using --tmp, printed paths are clickable in most terminals (similar to yek output).
+chat_chunks() {
+  local help_text
+  help_text=$(cat <<'EOF'
+chat_chunks — Split big text into ChatGPT-friendly parts with headers.
+
+Usage:
+  chat_chunks <file> [--max-chars N] [--out DIR | --tmp] [--prefix TEXT] [--mode ack|final] [--print]
+  <cmd> | chat_chunks --stdin [--max-chars N] [--out DIR | --tmp] [--prefix TEXT] [--mode ack|final] [--print]
+  chat_chunks --help
+
+Options:
+  --stdin            Read input from stdin instead of a file
+  --max-chars N      Max bytes per chunk (default: 80000)
+  --out DIR          Output directory (default: ./chunks-YYYYmmdd-HHMMSS)
+  --tmp              Write chunks under /tmp/chat-chunks/run-YYYYmmdd-HHMMSS and print full paths (yek-style)
+  --prefix TEXT      Header prefix text (default: 'This is PART X of Y.')
+  --mode ack|final   ack => 'Reply only: OK, ready for next part.' (default)
+                    final => last chunk includes: 'ALL PARTS SENT. Now process the full content.'
+  --print            Print chunks to stdout instead of writing files
+  -h, --help         Show help
+
+Examples:
+  chat_chunks big.txt
+  yek . | chat_chunks --stdin --tmp
+  yek . | chat_chunks --stdin --tmp --max-chars 120000
+  yek . | chat_chunks --stdin --print | less -FRNX
+EOF
+)
+
+  local from_stdin=0
+  local max_chars=80000
+  local out_dir=""
+  local use_tmp=0
+  local prefix=""
+  local mode="ack"
+  local print_only=0
+  local input_file=""
+
+  if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    echo "$help_text"
+    return 0
+  fi
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --stdin) from_stdin=1; shift ;;
+      --max-chars) shift; max_chars="${1:-}"; shift ;;
+      --out) shift; out_dir="${1:-}"; shift ;;
+      --tmp) use_tmp=1; shift ;;
+      --prefix) shift; prefix="${1:-}"; shift ;;
+      --mode) shift; mode="${1:-ack}"; shift ;;
+      --print) print_only=1; shift ;;
+      -*) echo "Unknown option: $1"; echo "Use: chat_chunks --help"; return 1 ;;
+      *)
+        if [[ -z "$input_file" ]]; then input_file="$1"; shift
+        else echo "Unexpected extra argument: $1"; return 1
+        fi
+        ;;
+    esac
+  done
+
+  if [[ $from_stdin -eq 0 && -z "$input_file" ]]; then
+    echo "ERROR: Provide a file path or use --stdin"
+    return 1
+  fi
+
+  if ! [[ "$max_chars" =~ ^[0-9]+$ ]] || [[ "$max_chars" -lt 1000 ]]; then
+    echo "ERROR: --max-chars must be an integer >= 1000"
+    return 1
+  fi
+
+  [[ -n "$prefix" ]] || prefix="This is PART %d of %d."
+
+  local tmpbase="${TMPDIR:-/tmp}"
+  local base_dir="$tmpbase/chat-chunks"
+  mkdir -p "$base_dir"
+
+  # Keep only last 20 runs (optional cleanup; adjust or remove if you want)
+  ls -dt "$base_dir"/run-* 2>/dev/null | tail -n +21 | xargs -r rm -rf 2>/dev/null || true
+
+  # Stage input to a temp file (fast + stream-friendly)
+  local staged
+  staged="$(mktemp "$tmpbase/chat-chunks.input.XXXXXX")"
+  trap 'rm -f "$staged"' RETURN
+
+  if [[ $from_stdin -eq 1 ]]; then
+    tr -d '\r' > "$staged"
+  else
+    [[ -f "$input_file" ]] || { echo "ERROR: File not found: $input_file"; return 1; }
+    tr -d '\r' < "$input_file" > "$staged"
+  fi
+
+  if [[ ! -s "$staged" ]]; then
+    echo "ERROR: Input is empty"
+    return 1
+  fi
+
+  # Choose output directory
+  if [[ $print_only -eq 0 ]]; then
+    if [[ $use_tmp -eq 1 ]]; then
+      out_dir="$base_dir/run-$(date +%Y%m%d-%H%M%S)"
+      mkdir -p "$out_dir"
+    else
+      [[ -n "$out_dir" ]] || out_dir="./chunks-$(date +%Y%m%d-%H%M%S)"
+      mkdir -p "$out_dir"
+    fi
+  else
+    # For --print, still chunk into a run dir, then cat them; remove at end
+    out_dir="$base_dir/run-$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$out_dir"
+  fi
+
+  # Split fast in native code.
+  # -C N: max bytes, but don't split mid-line
+  # -d: numeric suffix, -a 3: 000..999, --additional-suffix: .txt
+  split -d -a 3 --additional-suffix=.txt -C "$max_chars" "$staged" "$out_dir/part-"
+
+  # Count parts
+  local parts
+  parts=$(ls "$out_dir"/part-*.txt 2>/dev/null | wc -l | tr -d ' ')
+  if [[ "$parts" -eq 0 ]]; then
+    echo "ERROR: split produced no output"
+    return 1
+  fi
+
+  # Prepend headers
+  local i=1
+  local file
+  for file in "$out_dir"/part-*.txt; do
+    local header
+    printf -v header "$prefix" "$i" "$parts"
+
+    if [[ "$mode" == "final" && "$i" -eq "$parts" ]]; then
+      header="$header"$'\n'"ALL PARTS SENT. Now process the full content."
+    else
+      header="$header"$'\n'"Do not analyze or summarize yet."$'\n'"Reply only with: OK, ready for next part."
+    fi
+
+    local tmpfile
+    tmpfile="$(mktemp "$tmpbase/chat-chunks.part.XXXXXX")"
+    {
+      echo "$header"
+      echo
+      cat "$file"
+    } > "$tmpfile"
+    mv "$tmpfile" "$file"
+
+    i=$(( i + 1 ))
+  done
+
+  # Output
+  if [[ $print_only -eq 1 ]]; then
+    for file in "$out_dir"/part-*.txt; do
+      cat "$file"
+      echo
+      echo "-----"
+      echo
+    done
+    rm -rf "$out_dir"
+    return 0
+  fi
+
+  # Print full paths (clickable)
+  for file in "$out_dir"/part-*.txt; do
+    echo "$file"
+  done
+}
+
+# ych — yek wrapper that forwards ALL args to yek, then chunks the output.
+# Behaves like: yek "$@" | chat_chunks --stdin --tmp
+ych() {
+  if [[ $# -eq 0 ]]; then
+    set -- .
+  fi
+
+  # If the user is asking for yek help/version/etc, don't pipe.
+  # This avoids broken-pipe noise and preserves yek's exact behavior/output.
+  case "${1:-}" in
+    -h|--help|help|--version|-V|version)
+      yek "$@"
+      return $?
+      ;;
+  esac
+
+  yek "$@" | chat_chunks --stdin --tmp
+}
