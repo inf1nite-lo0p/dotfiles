@@ -566,3 +566,126 @@ ych() {
 
   yek "$@" | chat_chunks --stdin --tmp
 }
+
+# pr-diff — Fetch PR diff to /tmp and write a filtered diff excluding review-noise files (private-safe via gh)
+#
+# Usage:
+#   pr-diff <pr-number> [--full]
+#   pr-diff <owner>/<repo> <pr-number> [--full]
+#   pr-diff <pr-url> [--full]
+#
+# Config:
+#   PR_DIFF_EXCLUDE="space separated patterns"   # overrides defaults
+pr-diff() {
+  local input="${1:-}"
+  local second="${2:-}"
+  local third="${3:-}"
+  local mode=""
+  local pr_arg=""
+
+  # Files / patterns to exclude from the diff (review noise)
+  # Override via PR_DIFF_EXCLUDE (space-separated)
+  local excludes
+  excludes="${PR_DIFF_EXCLUDE:-pnpm-lock.yaml package-lock.json yarn.lock bun.lockb}"
+
+  if [[ -z "$input" || "$input" == "--help" || "$input" == "-h" ]]; then
+    cat <<'EOF'
+pr-diff — Fetch PR diff to /tmp and write a filtered diff excluding review-noise files (private-safe via gh)
+
+Usage:
+  pr-diff <pr-number> [--full]
+  pr-diff <owner>/<repo> <pr-number> [--full]
+  pr-diff <pr-url> [--full]
+
+Outputs:
+  - Filtered diff: /tmp/pr-diff-XXXXXX.diff      (primary)
+  - Raw diff:      /tmp/pr-diff-XXXXXX.raw.diff  (reference)
+
+Config:
+  PR_DIFF_EXCLUDE="pnpm-lock.yaml yarn.lock ..."  # space-separated patterns (* supported)
+EOF
+    return 0
+  fi
+
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "ERROR: gh is required. Install GitHub CLI and run: gh auth login"
+    return 1
+  fi
+
+  # Resolve PR argument and optional mode
+  if [[ "$input" =~ ^https?://github\.com/.*/pull/[0-9]+/?$ ]]; then
+    pr_arg="${input%/}"
+    mode="${second:-}"
+  elif [[ "$input" =~ ^[^/]+/[^/]+$ && "$second" =~ ^[0-9]+$ ]]; then
+    pr_arg="https://github.com/${input}/pull/${second}"
+    mode="${third:-}"
+  elif [[ "$input" =~ ^[0-9]+$ ]]; then
+    pr_arg="$input"
+    mode="${second:-}"
+  else
+    echo "ERROR: Invalid input. Use: pr-diff --help"
+    return 1
+  fi
+
+  local raw filtered
+  raw="$(mktemp "${TMPDIR:-/tmp}/pr-diff-XXXXXX.raw.diff")" || return 1
+  filtered="${raw%.raw.diff}.diff"
+
+  echo "[1/3] Fetching PR diff via gh..."
+  if ! gh pr diff "$pr_arg" --patch > "$raw"; then
+    echo "ERROR: Failed to fetch PR diff via gh. Check: gh auth status"
+    rm -f "$raw"
+    return 1
+  fi
+
+  echo "[2/3] Filtering excluded files..."
+  awk -v excludes="$excludes" '
+    BEGIN {
+      skip = 0
+      n = split(excludes, ex, " ")
+    }
+    {
+      sub(/\r$/, "", $0)  # handle CRLF
+    }
+    /^diff --git a\// {
+      file = $0
+      sub(/^diff --git a\//, "", file)
+      sub(/ b\/.*/, "", file)
+
+      skip = 0
+      for (i = 1; i <= n; i++) {
+        pattern = ex[i]
+        gsub(/\./, "\\.", pattern)
+        gsub(/\*/, ".*", pattern)
+        if (file ~ "^" pattern "$") {
+          skip = 1
+          next
+        }
+      }
+    }
+    skip == 0 { print }
+  ' "$raw" > "$filtered"
+
+  echo "[3/3] Done."
+  echo
+    if [[ -t 1 ]]; then
+      GREEN='\033[1;32m'
+      DIM='\033[2m'
+      RESET='\033[0m'
+    else
+      GREEN='' DIM='' RESET=''
+    fi
+  echo -e "${GREEN}Filtered diff:${RESET} $filtered"
+  echo -e "${DIM}Raw diff:${RESET}      $raw"
+  echo
+
+
+  # Show stats from the filtered file (matches what you will review/apply)
+  git apply --stat "$filtered"
+
+  if [[ "$mode" == "--full" ]]; then
+    echo
+    echo "Tip: view filtered diff:"
+    echo "  less -FRNX \"$filtered\""
+  fi
+}
