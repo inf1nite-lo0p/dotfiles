@@ -107,18 +107,20 @@
 
     # Write PR-style diff (current branch vs base, default: main) to a temp file and print its path
     branch-diff = "!f() { \
-        base=\"${1:-main}\"; \
-        tmp=$(mktemp -t git-branch-diff.${base}.XXXXXX.diff); \
-        git diff \"$base...HEAD\" > \"$tmp\"; \
-        echo \"$tmp\"; \
+      base=\"${1:-main}\"; \
+      safe_base=$(printf '%s' \"$base\" | tr '/\\\\' '__' | tr -cs '[:alnum:]._-' '_'); \
+      tmp=$(mktemp -t \"git-branch-diff.${safe_base}.XXXXXX.diff\"); \
+      git diff \"$base...HEAD\" > \"$tmp\"; \
+      echo \"$tmp\"; \
     }; f"
 
     # Write PR-style patch (current branch vs base, default: main) to a temp file and print its path
     branch-patch = "!f() { \
-        base=\"${1:-main}\"; \
-        tmp=$(mktemp -t git-branch-patch.${base}.XXXXXX.patch); \
-        git diff --patch \"$base...HEAD\" > \"$tmp\"; \
-        echo \"$tmp\"; \
+      base=\"${1:-main}\"; \
+      safe_base=$(printf '%s' \"$base\" | tr '/\\\\' '__' | tr -cs '[:alnum:]._-' '_'); \
+      tmp=$(mktemp -t \"git-branch-patch.${safe_base}.XXXXXX.patch\"); \
+      git diff --patch \"$base...HEAD\" > \"$tmp\"; \
+      echo \"$tmp\"; \
     }; f"
 
 [core]
