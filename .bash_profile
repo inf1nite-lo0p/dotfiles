@@ -62,7 +62,10 @@ set -o vi
 eval "$(starship init bash)"
 
 # 11. Load nvm (must be before completions)
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+# 11.1 Always use default Node in new shells
+nvm use default --silent >/dev/null 2>&1
 
 # 12. Load completions (after tools are loaded)
 [ -f ~/.completions ] && source ~/.completions
