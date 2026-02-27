@@ -123,6 +123,18 @@
       echo \"$tmp\"; \
     }; f"
 
+    # Squash current branch into a single commit relative to base (default: main)
+    # Usage:
+    #   git sb
+    #   git sb develop
+    sb = "!f() { \
+      base=\"${1:-main}\"; \
+      git fetch origin \"$base\" && \
+      mb=$(git merge-base HEAD origin/$base) && \
+      git reset --soft \"$mb\" && \
+      git commit; \
+    }; f"
+
 [core]
 
     # Make VSCode default editor when operating with Git
