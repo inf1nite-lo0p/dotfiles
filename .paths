@@ -23,11 +23,36 @@ export PATH="$KREW_ROOT/bin:$PATH"
 # nvm path only (actual load of nvm.sh happens later)
 export NVM_DIR="$HOME/.nvm"
 
-# Windows Subsystem for Linux cleanup
-if command -v is_wsl &>/dev/null && is_wsl; then
-  WINDOWS_USER=$(/mnt/c/Windows/System32/cmd.exe /c 'echo %USERNAME%' 2>/dev/null | sed -e 's/\r//g')
-  PATH=$(echo "$PATH" | sed -e 's%:/mnt/c/Program Files/nodejs%%')
-  PATH=$(echo "$PATH" | sed -e "s%:/mnt/c/Users/$WINDOWS_USER/AppData/Roaming/npm%%")
+# WSL cleanup: remove Windows Node/npm/pnpm paths
+if grep -qEi "(Microsoft|WSL)" /proc/version 2>/dev/null; then
+  WINDOWS_USER=$(/mnt/c/Windows/System32/cmd.exe /c 'echo %USERNAME%' 2>/dev/null | tr -d '\r')
+
+  CLEANED_PATH=""
+  OLD_IFS="$IFS"
+  IFS=':'
+
+  for entry in $PATH; do
+    case "$entry" in
+      "/mnt/c/Program Files/nodejs"| \
+      "/mnt/c/Program Files/nodejs/"| \
+      "/mnt/c/Users/$WINDOWS_USER/AppData/Roaming/npm"| \
+      "/mnt/c/Users/$WINDOWS_USER/AppData/Local/pnpm"| \
+      "/mnt/c/Users/$WINDOWS_USER/.config/herd/bin"| \
+      "/mnt/c/Users/$WINDOWS_USER/.config/herd/bin/nvm")
+        ;;
+      *)
+        if [ -z "$CLEANED_PATH" ]; then
+          CLEANED_PATH="$entry"
+        else
+          CLEANED_PATH="$CLEANED_PATH:$entry"
+        fi
+        ;;
+    esac
+  done
+
+  IFS="$OLD_IFS"
+  export PATH="$CLEANED_PATH"
+  unset CLEANED_PATH OLD_IFS WINDOWS_USER
 fi
 
 # Preserve MANPATH if it exists; otherwise use default
