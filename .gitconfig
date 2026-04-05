@@ -56,19 +56,81 @@
     # Find commits by commit message
     fm = "!f() { git log --pretty=format:'%C(yellow)%h  %Cblue%ad  %Creset%s%Cgreen  [%cn] %Cred%d' --decorate --date=short --grep=$1; }; f"
 
-    # Preview commits introduced by a merge commit (oldest → newest), excluding merges
-    # Usage: git merge-preview <MERGE_COMMIT_SHA>
-    # Example: git merge-preview abc1234     # Shows commits that were merged in abc1234 (like from a PR)
+[alias]
+
+    # ------------------------------------------------------------
+    # Preview commits introduced by a merge commit (oldest → newest)
+    #
+    # Shows the actual commits that came from the PR (no merges),
+    # in the order they will be cherry-picked.
+    #
+    # Usage:
+    #   git merge-preview <MERGE_COMMIT_SHA>
+    #
+    # Example:
+    #   git merge-preview abc1234
+    # ------------------------------------------------------------
     merge-preview = "!f() { \
         git rev-list --reverse --no-merges \"$1^1..$1^2\" \
         | xargs -I{} git --no-pager log -n1 --oneline {}; \
     }; f"
 
-    # Cherry-pick commits introduced by a merge commit (oldest → newest), excluding merges
-    # Usage: git merge-cherry <MERGE_COMMIT_SHA>
-    # Example: git merge-cherry abc1234      # Cherry-picks the commits that were merged in abc1234
+
+    # ------------------------------------------------------------
+    # Cherry-pick commits from a merge commit (PR reincarnation)
+    #
+    # Replays all commits introduced by a PR, preserving:
+    # - original authors
+    # - original commit messages
+    #
+    # Improvements:
+    # - uses --stdin (safe for many commits)
+    # - uses --empty=keep to preserve attribution even if commit is redundant
+    #
+    # NOTE:
+    # Stops on conflicts — use `git merge-cherry-continue`
+    #
+    # Usage:
+    #   git merge-cherry <MERGE_COMMIT_SHA>
+    #
+    # Example:
+    #   git merge-cherry abc1234
+    # ------------------------------------------------------------
     merge-cherry = "!f() { \
-        git cherry-pick $(git rev-list --reverse --no-merges \"$1^1..$1^2\"); \
+        git rev-list --reverse --no-merges \"$1^1..$1^2\" \
+        | git cherry-pick --stdin --empty=keep; \
+    }; f"
+
+
+    # ------------------------------------------------------------
+    # Continue cherry-pick sequence automatically
+    #
+    # After resolving a conflict manually, run this to:
+    # - stage all changes
+    # - continue cherry-pick
+    # - repeat until next conflict or completion
+    #
+    # This dramatically speeds up long PR replays.
+    #
+    # Usage:
+    #   git merge-cherry-continue
+    # ------------------------------------------------------------
+    merge-cherry-continue = "!f() { \
+        while true; do \
+            if [ ! -f .git/CHERRY_PICK_HEAD ]; then \
+                echo '✓ Cherry-pick sequence completed.'; \
+                break; \
+            fi; \
+            \
+            git add -A; \
+            \
+            if git cherry-pick --continue; then \
+                echo '✓ Continued'; \
+            else \
+                echo '✗ Conflict encountered. Resolve and re-run.'; \
+                break; \
+            fi; \
+        done; \
     }; f"
 
     # Remove branches that have already been merged with main.
