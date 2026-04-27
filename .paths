@@ -1,5 +1,5 @@
-# Core user bin
-export PATH="$HOME/bin:$PATH"
+# Core user bins
+export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 
 # PNPM global install path
 export PNPM_HOME="$HOME/.local/share/pnpm"
@@ -14,7 +14,9 @@ export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
 # Laravel Sail (via Linuxbrew)
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+fi
 
 # Krew (kubectl plugin manager)
 export KREW_ROOT="${KREW_ROOT:-$HOME/.krew}"
@@ -55,5 +57,15 @@ if grep -qEi "(Microsoft|WSL)" /proc/version 2>/dev/null; then
   unset CLEANED_PATH OLD_IFS WINDOWS_USER
 fi
 
+# Deduplicate PATH while preserving order
+if command -v awk >/dev/null 2>&1; then
+  PATH="$(printf '%s' "$PATH" | awk -v RS=':' -v ORS=':' '!seen[$0]++' | sed 's/:$//')"
+  export PATH
+fi
+
 # Preserve MANPATH if it exists; otherwise use default
-export MANPATH="${MANPATH-$(manpath)}:$NPM_PACKAGES/share/man"
+if command -v manpath >/dev/null 2>&1; then
+  export MANPATH="${MANPATH-$(manpath)}:$NPM_PACKAGES/share/man"
+else
+  export MANPATH="${MANPATH:-}:$NPM_PACKAGES/share/man"
+fi
