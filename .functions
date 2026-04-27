@@ -164,20 +164,24 @@ function o() {
 
 # tre — handy tree wrapper
 #
+# By default writes plain output to a timestamped file under
+# $TMPDIR/tre and prints the full path (clickable in most terminals,
+# same pattern as `ych`). Use `-o <file>` to write to a specific path.
+#
 # Examples:
-#   tre                    # full tree (with colors in pager), ignores clutter
+#   tre                    # write tree to /tmp/tre/run-*.txt, print path
 #   tre -L 1 -d            # folders only, depth = 1
 #   tre -L 2               # files + folders, depth = 2
 #   tre --prune            # hide dirs that end up empty after filtering
 #   tre -L 1 -d --prune    # folders only, depth = 1, pruned
-#   tre -o structure.txt   # write plain output to file (no color)
+#   tre -o structure.txt   # write to a specific file instead of /tmp
 #   tre src -L 2           # limit to "src" directory
 #
 # Flags passed through to `tree`:
 #   -L <n>   max depth
 #   -d       directories only
 #   --prune  hide empty dirs after -I filtering
-#   -o <f>   (tre-only) save to file (disables color)
+#   -o <f>   (tre-only) override the default tmp output path
 #
 # Ignore pattern (built-in):
 #   .git|node_modules|bower_components|coverage|.turbo|dist|playwright-report|test-results|.next
@@ -190,20 +194,23 @@ function tre() {
     local help_text=$(cat <<'EOF'
 tre — handy tree wrapper
 
+By default writes plain output to a timestamped file under $TMPDIR/tre
+and prints the full path (clickable in most terminals).
+
 Examples:
-  tre                    # full tree (with colors in pager), ignores clutter
+  tre                    # write tree to /tmp/tre/run-*.txt, print path
   tre -L 1 -d            # folders only, depth = 1
   tre -L 2               # files + folders, depth = 2
   tre --prune            # hide dirs that end up empty after filtering
   tre -L 1 -d --prune    # folders only, depth = 1, pruned
-  tre -o structure.txt   # write plain output to file (no color)
+  tre -o structure.txt   # write to a specific file instead of /tmp
   tre src -L 2           # limit to "src" directory
 
 Flags passed through to `tree`:
   -L <n>   max depth
   -d       directories only
   --prune  hide empty dirs after -I filtering
-  -o <f>   (tre-only) save to file (disables color)
+  -o <f>   (tre-only) override the default tmp output path
 
 Ignore pattern (built-in):
   .git|node_modules|bower_components|coverage|.turbo|dist|playwright-report|test-results|.next
@@ -230,14 +237,17 @@ EOF
         shift
     done
 
-    if [[ -n "$outfile" ]]; then
-        # No -C: disable color when writing to file
-        tree -a -I "$tre_ignore" --dirsfirst "${args[@]}" > "$outfile"
-        echo "Output saved to $outfile"
-    else
-        # Use color when outputting to terminal
-        tree -aC -I "$tre_ignore" --dirsfirst "${args[@]}" | less -FRNX
+    # Default: write to $TMPDIR/tre/run-YYYYmmdd-HHMMSS.txt and print path
+    if [[ -z "$outfile" ]]; then
+        local base_dir="${TMPDIR:-/tmp}/tre"
+        mkdir -p "$base_dir"
+        # Keep only the last 20 runs
+        ls -dt "$base_dir"/run-*.txt 2>/dev/null | tail -n +21 | xargs -r rm -f 2>/dev/null || true
+        outfile="$base_dir/run-$(date +%Y%m%d-%H%M%S).txt"
     fi
+
+    tree -a -I "$tre_ignore" --dirsfirst "${args[@]}" > "$outfile"
+    echo "$outfile"
 }
 
 # Detect WSL environment
