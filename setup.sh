@@ -11,6 +11,11 @@ function doIt() {
 	ln -sf "$(pwd)/tmux.conf" ~/.tmux.conf
     ln -sf "$(pwd)/.inputrc" ~/.inputrc
 
+	mkdir -p ~/.claude/hooks
+	ln -sf "$(pwd)/.claude/settings.json" ~/.claude/settings.json
+	ln -sf "$(pwd)/.claude/statusline-shadcn.sh" ~/.claude/statusline-shadcn.sh
+	ln -sf "$(pwd)/.claude/hooks/dotfiles-context.sh" ~/.claude/hooks/dotfiles-context.sh
+
 	source ~/.bash_profile;
 }
 

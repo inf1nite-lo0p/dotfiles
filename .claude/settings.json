@@ -1,0 +1,37 @@
+{
+  "theme": "dark",
+  "editorMode": "vim",
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline-shadcn.sh",
+    "padding": 1
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "wsl-screenshot-cli start --daemon 2>/dev/null; echo 'wsl-screenshot-cli started'"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/dotfiles-context.sh"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "wsl-screenshot-cli stop 2>/dev/null"
+          }
+        ]
+      }
+    ]
+  }
+}
