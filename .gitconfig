@@ -56,6 +56,70 @@
     # Find commits by commit message
     fm = "!f() { git log --pretty=format:'%C(yellow)%h  %Cblue%ad  %Creset%s%Cgreen  [%cn] %Cred%d' --decorate --date=short --grep=$1; }; f"
 
+    # Delete all linked worktrees except the main worktree, reporting each one.
+    wda = "!f() { \
+        list=$(git worktree list --porcelain | awk ' \
+            /^worktree / { wt = substr($0, 10); br = \"\" } \
+            /^branch refs\\/heads\\// { br = substr($0, 19) } \
+            /^detached$/ { br = \"(detached)\" } \
+            /^$/ { if (wt) print wt \"\\t\" br; wt = \"\" } \
+            END { if (wt) print wt \"\\t\" br }' \
+            | tail -n +2); \
+        if [ -z \"$list\" ]; then \
+            echo 'No linked worktrees to remove.'; \
+            return 0; \
+        fi; \
+        tab=$(printf '\\t'); \
+        printf '%s\\n' \"$list\" | { \
+            ok=0; fail=0; \
+            while IFS=\"$tab\" read -r path branch; do \
+                if git worktree remove \"$path\" 2>/dev/null; then \
+                    printf '✓ removed  %s  (%s)\\n' \"$path\" \"$branch\"; \
+                    ok=$((ok+1)); \
+                else \
+                    printf '✗ failed   %s  (%s)\\n' \"$path\" \"$branch\"; \
+                    fail=$((fail+1)); \
+                fi; \
+            done; \
+            echo; \
+            if [ \"$fail\" -gt 0 ]; then \
+                echo \"Done. $ok removed, $fail failed (use 'git wdaf' to force).\"; \
+            else \
+                echo \"Done. $ok removed.\"; \
+            fi; \
+        }; \
+    }; f"
+
+    # Force-delete all linked worktrees except the main worktree, reporting each one.
+    wdaf = "!f() { \
+        list=$(git worktree list --porcelain | awk ' \
+            /^worktree / { wt = substr($0, 10); br = \"\" } \
+            /^branch refs\\/heads\\// { br = substr($0, 19) } \
+            /^detached$/ { br = \"(detached)\" } \
+            /^$/ { if (wt) print wt \"\\t\" br; wt = \"\" } \
+            END { if (wt) print wt \"\\t\" br }' \
+            | tail -n +2); \
+        if [ -z \"$list\" ]; then \
+            echo 'No linked worktrees to remove.'; \
+            return 0; \
+        fi; \
+        tab=$(printf '\\t'); \
+        printf '%s\\n' \"$list\" | { \
+            ok=0; fail=0; \
+            while IFS=\"$tab\" read -r path branch; do \
+                if git worktree remove --force \"$path\" 2>/dev/null; then \
+                    printf '✓ force-removed  %s  (%s)\\n' \"$path\" \"$branch\"; \
+                    ok=$((ok+1)); \
+                else \
+                    printf '✗ failed         %s  (%s)\\n' \"$path\" \"$branch\"; \
+                    fail=$((fail+1)); \
+                fi; \
+            done; \
+            echo; \
+            echo \"Done. $ok removed, $fail failed.\"; \
+        }; \
+    }; f"
+
 [alias]
 
     # ------------------------------------------------------------
