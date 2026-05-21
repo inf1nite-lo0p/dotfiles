@@ -699,3 +699,12 @@ EOF
     echo "  less -FRNX \"$filtered\""
   fi
 }
+
+# op — fuzzy-pick a git project (and worktrees) and cd into it.
+# Defines the `op()` shell function from the binary's embedded shim,
+# the same line the official installer suggests. Skipped silently if
+# op-bin isn't installed, so this works across machines whether or
+# not op happens to be set up there.
+if command -v op-bin >/dev/null 2>&1; then
+	eval "$(op-bin shell-init bash)"
+fi
