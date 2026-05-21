@@ -16,11 +16,13 @@ Personal dotfiles, not an application. There is no build, no tests, no package m
 `setup.sh` does two different things and the distinction matters when editing it:
 
 1. **`rsync` everything else into `$HOME`** (excluding `.git/`, `setup.sh`, `README.md`). Files like `.bash_profile`, `.aliases`, `.functions`, `.paths`, `.gitconfig`, `.completions`, `.bashrc` are *copied* — editing the copy in `$HOME` will not feed back into the repo. Edit them here and re-run `setup.sh` to propagate.
-2. **`ln -sf` for a few specific files** — `tmux.conf`, `.inputrc`, `.claude/settings.json`, `.claude/statusline-shadcn.sh`, `.claude/hooks/dotfiles-context.sh`. These are *symlinks*, so changes in `$HOME` and in this repo are the same file.
+2. **`ln -sf` for a few specific files** — `tmux.conf`, `.inputrc`. These are *symlinks*, so changes in `$HOME` and in this repo are the same file.
 
 If you add a new file to either group, update `setup.sh` accordingly. After running, `setup.sh` sources `~/.bash_profile` so the current shell picks up changes.
 
 `.extra` is git-ignored and must exist on each machine — it holds per-machine git identity (see README).
+
+Claude Code configuration (`~/.claude/`) is **not** part of this public repo for privacy reasons. It lives in a separate, private repo at `~/.claude-config/` (see its README). The symlinks at `~/.claude/settings.json`, `~/.claude/statusline-shadcn.sh`, and `~/.claude/hooks/dotfiles-context.sh` point into that repo.
 
 ## Shell load order (`.bash_profile`)
 
@@ -32,13 +34,9 @@ Order is load-bearing — do not reshuffle without understanding it:
 4. `nvm.sh` is loaded *before* `~/.completions`, because completions registers `kubectl`/`just`/`nvm` completions that may depend on those tools being on `PATH`.
 5. `nvm use default --silent` runs on every interactive shell, so a new shell may briefly switch the active Node version.
 
-## Claude Code integration (`.claude/`)
+## Claude Code integration
 
-- `settings.json` registers two `SessionStart` hooks (run in order on every session start):
-  - starts `wsl-screenshot-cli` as a daemon (stopped on `SessionEnd`).
-  - runs `hooks/dotfiles-context.sh`, which dumps the user's git aliases, shell aliases, and shell function names as `additionalContext` JSON. **This is why a "User dotfiles snapshot" appears in the session context** — that snapshot is generated live from `~/.gitconfig`, `~/.aliases`, `~/.functions` on session start. If you change those files, restart the Claude session (or re-source) to refresh the snapshot.
-- `statusline-shadcn.sh` reads a JSON blob on stdin (model, cwd, context %, cost, rate limits) and prints up to three styled lines. The branch is rendered as an OSC 8 hyperlink to the GitHub branch when `origin` is GitHub.
-- `dotfiles-context.sh` requires `jq` (it constructs the JSON output safely via `jq -n`). If `jq` is missing the hook fails — leave the `jq` invocation alone.
+Lives in `~/.claude-config/` (separate private repo). The session-start snapshot you see in this repo's context still flows from `~/.gitconfig`, `~/.aliases`, `~/.functions` — the hook script that emits it is `~/.claude-config/hooks/dotfiles-context.sh`. If you change those files, restart the Claude session (or re-source) to refresh the snapshot.
 
 ## Conventions when editing here
 
