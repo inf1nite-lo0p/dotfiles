@@ -52,6 +52,3 @@ alias sail='[ -f sail ] && bash sail || bash vendor/bin/sail'
 
 # Update pnpm packages to latest version
 alias pup='pnpm upgrade -i -r -L'
-
-# Restart the WSL screenshot clipboard daemon
-alias wsr='"$HOME/.local/bin/wsl-screenshot-cli" stop >/dev/null 2>&1; "$HOME/.local/bin/wsl-screenshot-cli" start -d -q && sleep 1 && "$HOME/.local/bin/wsl-screenshot-cli" status'

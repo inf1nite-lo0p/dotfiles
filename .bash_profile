@@ -73,10 +73,3 @@ nvm use default --silent >/dev/null 2>&1
 # 13. Enable auto-complete for just tasks
 source ~/.just-completion.bash
 complete -F _just -o default j
-
-# 14. WSL: auto-start wsl-screenshot-cli clipboard daemon (idempotent: no-op if already running)
-if grep -qEi "(Microsoft|WSL)" /proc/version 2>/dev/null \
-  && [ -x "$HOME/.local/bin/wsl-screenshot-cli" ]; then
-  "$HOME/.local/bin/wsl-screenshot-cli" start -d -q >/dev/null 2>&1 &
-  disown 2>/dev/null
-fi
