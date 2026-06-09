@@ -16,7 +16,7 @@ Personal dotfiles, not an application. There is no build, no tests, no package m
 `setup.sh` does two different things and the distinction matters when editing it:
 
 1. **`rsync` everything else into `$HOME`** (excluding `.git/`, `setup.sh`, `README.md`). Files like `.bash_profile`, `.aliases`, `.functions`, `.paths`, `.gitconfig`, `.completions`, `.bashrc` are *copied* — editing the copy in `$HOME` will not feed back into the repo. Edit them here and re-run `setup.sh` to propagate.
-2. **`ln -sf` for a few specific files** — `tmux.conf`, `.inputrc`. These are *symlinks*, so changes in `$HOME` and in this repo are the same file.
+2. **`ln -sf` for a few specific files** — `tmux.conf`. These are *symlinks*, so changes in `$HOME` and in this repo are the same file.
 
 If you add a new file to either group, update `setup.sh` accordingly. After running, `setup.sh` sources `~/.bash_profile` so the current shell picks up changes.
 
