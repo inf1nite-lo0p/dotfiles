@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
-# wl-paste shim — makes Claude Code image paste work on this WSL machine.
+# wl-paste shim — makes Claude Code image paste work on WSL.
 #
 # Why: Claude Code reads a pasted image via `xclip -t image/png` and, when that
 # fails, `wl-paste --type image/png`. WSLg only mirrors the Windows clipboard
 # image to Wayland as image/bmp, so the image/png request returns 0 bytes and
 # nothing pastes. PowerShell, however, can read the Windows clipboard and hand
-# back a proper PNG (verified on this box). So this shim:
+# back a proper PNG. So this shim:
 #   * advertises image/png in `-l` whenever the clipboard holds an image
 #   * serves a real PNG (via PowerShell) for any image/* --type request
-#   * passes everything else straight through to the real /usr/bin/wl-paste
+#   * passes everything else through to the real /usr/bin/wl-paste
 #
-# It is intentionally narrow: only image requests are intercepted; text and all
-# other behavior are delegated unchanged to the real binary.
+# Self-contained: the real wl-paste (wl-clipboard package) is used for the type
+# list ONLY when present; if it is absent the shim falls back to PowerShell, so
+# no apt packages are required. The one real prerequisite is that WSLInterop is
+# registered so powershell.exe runs (systemd can wipe it — see setup.sh).
 
 REAL=/usr/bin/wl-paste
 
@@ -24,21 +26,16 @@ for a in "$@"; do
   esac
 done
 
-# --list-types: pass real types through, but normalize any image/* to image/png
-# so Claude requests the format we can actually deliver.
-if [ "$list" = 1 ]; then
-  out=$("$REAL" "$@" 2>/dev/null)
-  if printf '%s\n' "$out" | grep -q '^image/'; then
-    printf '%s\n' "$out" | grep -v '^image/'
-    printf 'image/png\n'
-  else
-    printf '%s\n' "$out"
-  fi
-  exit 0
-fi
+# Is there an image on the Windows clipboard? (used only when real wl-paste is absent)
+win_has_image() {
+  powershell.exe -NoProfile -STA -Command \
+    'Add-Type -AssemblyName System.Windows.Forms; if ([System.Windows.Forms.Clipboard]::ContainsImage()) { exit 0 } else { exit 1 }' \
+    >/dev/null 2>&1
+}
 
-# image/* byte request: produce a PNG from the Windows clipboard via PowerShell.
-if [ "$want_image" = 1 ]; then
+# Save the Windows clipboard image to a temp PNG; echo its WSL path (empty on failure).
+win_png_path() {
+  local win
   win=$(powershell.exe -NoProfile -STA -Command '
     Add-Type -AssemblyName System.Windows.Forms;
     Add-Type -AssemblyName System.Drawing;
@@ -47,17 +44,40 @@ if [ "$want_image" = 1 ]; then
     $p = Join-Path $env:TEMP ("cc-wlpaste-" + [Guid]::NewGuid().ToString() + ".png");
     $i.Save($p, [System.Drawing.Imaging.ImageFormat]::Png);
     Write-Output $p' 2>/dev/null | tr -d '\r')
-  if [ -n "$win" ]; then
-    lp=$(wslpath "$win" 2>/dev/null)
-    if [ -s "$lp" ]; then
-      cat "$lp"
-      rm -f "$lp"
-      exit 0
+  [ -n "$win" ] && wslpath "$win" 2>/dev/null
+}
+
+# --list-types: normalize any image/* to image/png so Claude requests the
+# format we can deliver. Prefer the real tool's list when available (fast, no
+# extra PowerShell launch); otherwise ask PowerShell whether an image exists.
+if [ "$list" = 1 ]; then
+  if [ -x "$REAL" ]; then
+    out=$("$REAL" "$@" 2>/dev/null)
+    if printf '%s\n' "$out" | grep -q '^image/'; then
+      printf '%s\n' "$out" | grep -v '^image/'
+      printf 'image/png\n'
+    else
+      printf '%s\n' "$out"
     fi
+  elif win_has_image; then
+    printf 'image/png\n'
   fi
-  # PowerShell route failed — defer to the real tool rather than emit nothing.
-  exec "$REAL" "$@"
+  exit 0
 fi
 
-# Anything else (text, no-arg, etc.) → real wl-paste, unchanged.
-exec "$REAL" "$@"
+# image/* byte request: produce a PNG from the Windows clipboard via PowerShell.
+if [ "$want_image" = 1 ]; then
+  lp=$(win_png_path)
+  if [ -n "$lp" ] && [ -s "$lp" ]; then
+    cat "$lp"
+    rm -f "$lp"
+    exit 0
+  fi
+  # PowerShell route failed — defer to the real tool if it exists.
+  [ -x "$REAL" ] && exec "$REAL" "$@"
+  exit 1
+fi
+
+# Anything else (text, no-arg, etc.) → real wl-paste if present, unchanged.
+[ -x "$REAL" ] && exec "$REAL" "$@"
+exit 0
