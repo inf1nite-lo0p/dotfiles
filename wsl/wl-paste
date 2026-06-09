@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# wl-paste shim — makes Claude Code image paste work on this WSL machine.
+#
+# Why: Claude Code reads a pasted image via `xclip -t image/png` and, when that
+# fails, `wl-paste --type image/png`. WSLg only mirrors the Windows clipboard
+# image to Wayland as image/bmp, so the image/png request returns 0 bytes and
+# nothing pastes. PowerShell, however, can read the Windows clipboard and hand
+# back a proper PNG (verified on this box). So this shim:
+#   * advertises image/png in `-l` whenever the clipboard holds an image
+#   * serves a real PNG (via PowerShell) for any image/* --type request
+#   * passes everything else straight through to the real /usr/bin/wl-paste
+#
+# It is intentionally narrow: only image requests are intercepted; text and all
+# other behavior are delegated unchanged to the real binary.
+
+REAL=/usr/bin/wl-paste
+
+list=0
+want_image=0
+for a in "$@"; do
+  case "$a" in
+    -l|--list-types) list=1 ;;
+    image/*)         want_image=1 ;;
+  esac
+done
+
+# --list-types: pass real types through, but normalize any image/* to image/png
+# so Claude requests the format we can actually deliver.
+if [ "$list" = 1 ]; then
+  out=$("$REAL" "$@" 2>/dev/null)
+  if printf '%s\n' "$out" | grep -q '^image/'; then
+    printf '%s\n' "$out" | grep -v '^image/'
+    printf 'image/png\n'
+  else
+    printf '%s\n' "$out"
+  fi
+  exit 0
+fi
+
+# image/* byte request: produce a PNG from the Windows clipboard via PowerShell.
+if [ "$want_image" = 1 ]; then
+  win=$(powershell.exe -NoProfile -STA -Command '
+    Add-Type -AssemblyName System.Windows.Forms;
+    Add-Type -AssemblyName System.Drawing;
+    $i = [System.Windows.Forms.Clipboard]::GetImage();
+    if ($null -eq $i) { exit 1 }
+    $p = Join-Path $env:TEMP ("cc-wlpaste-" + [Guid]::NewGuid().ToString() + ".png");
+    $i.Save($p, [System.Drawing.Imaging.ImageFormat]::Png);
+    Write-Output $p' 2>/dev/null | tr -d '\r')
+  if [ -n "$win" ]; then
+    lp=$(wslpath "$win" 2>/dev/null)
+    if [ -s "$lp" ]; then
+      cat "$lp"
+      rm -f "$lp"
+      exit 0
+    fi
+  fi
+  # PowerShell route failed — defer to the real tool rather than emit nothing.
+  exec "$REAL" "$@"
+fi
+
+# Anything else (text, no-arg, etc.) → real wl-paste, unchanged.
+exec "$REAL" "$@"
