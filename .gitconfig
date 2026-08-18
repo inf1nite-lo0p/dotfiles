@@ -56,8 +56,10 @@
     # Find commits by commit message
     fm = "!f() { git log --pretty=format:'%C(yellow)%h  %Cblue%ad  %Creset%s%Cgreen  [%cn] %Cred%d' --decorate --date=short --grep=$1; }; f"
 
-    # Delete all linked worktrees except the main worktree, reporting each one.
+    # Delete all linked worktrees except the main worktree and any worktree
+    # sitting on a protected branch (see `dotfiles.protectedBranches` below).
     wda = "!f() { \
+        protected=$(git config --get dotfiles.protectedBranches || echo 'main|master|develop|staging|production'); \
         list=$(git worktree list --porcelain | awk ' \
             /^worktree / { wt = substr($0, 10); br = \"\" } \
             /^branch refs\\/heads\\// { br = substr($0, 19) } \
@@ -71,8 +73,13 @@
         fi; \
         tab=$(printf '\\t'); \
         printf '%s\\n' \"$list\" | { \
-            ok=0; fail=0; \
+            ok=0; fail=0; skip=0; \
             while IFS=\"$tab\" read -r path branch; do \
+                if printf '%s\\n' \"$branch\" | grep -qxE \"$protected\"; then \
+                    printf '⏭ skipped  %s  (%s — protected)\\n' \"$path\" \"$branch\"; \
+                    skip=$((skip+1)); \
+                    continue; \
+                fi; \
                 if git worktree remove \"$path\" 2>/dev/null; then \
                     printf '✓ removed  %s  (%s)\\n' \"$path\" \"$branch\"; \
                     ok=$((ok+1)); \
@@ -82,6 +89,9 @@
                 fi; \
             done; \
             echo; \
+            if [ \"$skip\" -gt 0 ]; then \
+                echo \"Kept $skip protected worktree(s).\"; \
+            fi; \
             if [ \"$fail\" -gt 0 ]; then \
                 echo \"Done. $ok removed, $fail failed (use 'git wdaf' to force).\"; \
             else \
@@ -90,8 +100,9 @@
         }; \
     }; f"
 
-    # Force-delete all linked worktrees except the main worktree, reporting each one.
+    # Same as `wda` but force-removes; still refuses to touch protected branches.
     wdaf = "!f() { \
+        protected=$(git config --get dotfiles.protectedBranches || echo 'main|master|develop|staging|production'); \
         list=$(git worktree list --porcelain | awk ' \
             /^worktree / { wt = substr($0, 10); br = \"\" } \
             /^branch refs\\/heads\\// { br = substr($0, 19) } \
@@ -105,8 +116,13 @@
         fi; \
         tab=$(printf '\\t'); \
         printf '%s\\n' \"$list\" | { \
-            ok=0; fail=0; \
+            ok=0; fail=0; skip=0; \
             while IFS=\"$tab\" read -r path branch; do \
+                if printf '%s\\n' \"$branch\" | grep -qxE \"$protected\"; then \
+                    printf '⏭ skipped        %s  (%s — protected)\\n' \"$path\" \"$branch\"; \
+                    skip=$((skip+1)); \
+                    continue; \
+                fi; \
                 if git worktree remove --force \"$path\" 2>/dev/null; then \
                     printf '✓ force-removed  %s  (%s)\\n' \"$path\" \"$branch\"; \
                     ok=$((ok+1)); \
@@ -116,6 +132,9 @@
                 fi; \
             done; \
             echo; \
+            if [ \"$skip\" -gt 0 ]; then \
+                echo \"Kept $skip protected worktree(s).\"; \
+            fi; \
             echo \"Done. $ok removed, $fail failed.\"; \
         }; \
     }; f"
@@ -197,12 +216,32 @@
         done; \
     }; f"
 
-    # Remove branches that have already been merged with main.
-    # a.k.a. ‘delete merged’
-    dm = "!git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
+    # Branches `dm`, `da`, `wda` and `wdaf` must never touch.
+    # Default: main|master|develop|staging|production. Override per repo (or
+    # globally) when a project uses different names:
+    #   git config dotfiles.protectedBranches 'main|develop|staging|preprod'
+    # Exact branch names joined by `|` — no `^`/`$`, they are added for you.
 
-    # Delete all local branches except `main` and `develop`
-    da = "!git branch --format='%(refname:short)' | grep -vE '^(main|develop)$' | xargs -r git branch -D"
+    # Remove branches that have already been merged into HEAD.
+    # a.k.a. ‘delete merged’ — skips protected branches and the current branch.
+    dm = "!f() { \
+        protected=$(git config --get dotfiles.protectedBranches || echo 'main|master|develop|staging|production'); \
+        current=$(git symbolic-ref --quiet --short HEAD); \
+        git for-each-ref --merged HEAD --format='%(refname:short)' refs/heads/ \
+            | grep -vxE \"$protected\" \
+            | grep -vxF \"$current\" \
+            | xargs -r -n 1 git branch -d; \
+    }; f"
+
+    # Delete all local branches except the protected ones and the current branch.
+    da = "!f() { \
+        protected=$(git config --get dotfiles.protectedBranches || echo 'main|master|develop|staging|production'); \
+        current=$(git symbolic-ref --quiet --short HEAD); \
+        git for-each-ref --format='%(refname:short)' refs/heads/ \
+            | grep -vxE \"$protected\" \
+            | grep -vxF \"$current\" \
+            | xargs -r git branch -D; \
+    }; f"
 
     # List contributors with number of commits.
     contributors = shortlog --summary --numbered
