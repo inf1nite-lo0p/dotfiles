@@ -9,6 +9,7 @@ function doIt() {
 		--exclude "wsl/" \
 		--exclude ".lane/" \
 		--exclude "AGENTS.md" \
+		--exclude ".extra" \
 		-avh --no-perms . ~;
 
 	ln -sf "$(pwd)/tmux.conf" ~/.tmux.conf

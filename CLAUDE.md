@@ -20,9 +20,9 @@ Personal dotfiles, not an application. There is no build, no tests, no package m
 
 If you add a new file to either group, update `setup.sh` accordingly. After running, `setup.sh` sources `~/.bash_profile` so the current shell picks up changes.
 
-Anything that belongs to the repo but **not** to `$HOME` must be added to the rsync `--exclude` list, or it gets copied into the home directory. `.lane/` and `AGENTS.md` are excluded for exactly this reason.
+Anything that belongs to the repo but **not** to `$HOME` must be added to the rsync `--exclude` list, or it gets copied into the home directory. `.lane/`, `AGENTS.md`, and `.extra` are excluded for exactly this reason.
 
-> **Careful:** `.extra` is *not* excluded, so `setup.sh` overwrites `~/.extra` with this directory's copy. The repo-dir copy is gitignored and can be stale — check `cmp .extra ~/.extra` before running `setup.sh`, or you may clobber live per-machine secrets and git identity.
+`.extra` is excluded deliberately. It is gitignored per-machine state — git identity and tokens — that README step 4 tells you to create by hand, so it is never provisioned from this repo. Any `.extra` sitting in this directory is stale local scratch; without the exclude, `setup.sh` would rsync it over `~/.extra` and destroy secrets that exist only there.
 
 `.extra` is git-ignored and must exist on each machine — it holds per-machine git identity (see README).
 
