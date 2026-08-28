@@ -15,14 +15,24 @@ Personal dotfiles, not an application. There is no build, no tests, no package m
 
 `setup.sh` does two different things and the distinction matters when editing it:
 
-1. **`rsync` everything else into `$HOME`** (excluding `.git/`, `setup.sh`, `README.md`). Files like `.bash_profile`, `.aliases`, `.functions`, `.paths`, `.gitconfig`, `.completions`, `.bashrc` are *copied* — editing the copy in `$HOME` will not feed back into the repo. Edit them here and re-run `setup.sh` to propagate.
+1. **`rsync` everything else into `$HOME`** (excluding `.git/`, `setup.sh`, `README.md`, `wsl/`, `.lane/`, `AGENTS.md`). Files like `.bash_profile`, `.aliases`, `.functions`, `.paths`, `.gitconfig`, `.completions`, `.bashrc` are *copied* — editing the copy in `$HOME` will not feed back into the repo. Edit them here and re-run `setup.sh` to propagate.
 2. **`ln -sf` for a few specific files** — `tmux.conf`. These are *symlinks*, so changes in `$HOME` and in this repo are the same file.
 
 If you add a new file to either group, update `setup.sh` accordingly. After running, `setup.sh` sources `~/.bash_profile` so the current shell picks up changes.
 
+Anything that belongs to the repo but **not** to `$HOME` must be added to the rsync `--exclude` list, or it gets copied into the home directory. `.lane/` and `AGENTS.md` are excluded for exactly this reason.
+
+> **Careful:** `.extra` is *not* excluded, so `setup.sh` overwrites `~/.extra` with this directory's copy. The repo-dir copy is gitignored and can be stale — check `cmp .extra ~/.extra` before running `setup.sh`, or you may clobber live per-machine secrets and git identity.
+
 `.extra` is git-ignored and must exist on each machine — it holds per-machine git identity (see README).
 
-Claude Code configuration (`~/.claude/`) is **not** part of this public repo for privacy reasons. It lives in a separate, private repo at `~/.claude-config/` (see its README). The symlinks at `~/.claude/settings.json`, `~/.claude/statusline-shadcn.sh`, and `~/.claude/hooks/dotfiles-context.sh` point into that repo.
+Claude Code configuration (`~/.claude/`) is **not** part of this public repo for privacy reasons. It lives in a separate, private repo at `~/claude-config/` (see its README). The symlinks at `~/.claude/settings.json`, `~/.claude/statusline-shadcn.sh`, and `~/.claude/hooks/dotfiles-context.sh` point into that repo.
+
+## lane
+
+This repo is lane-initialized (`.lane/` + the `AGENTS.md` protocol block). Before editing a tracked file here, run `lane why <path>` to read any recorded constraints, and record non-obvious ones with `lane note add`. See the user-level `lane` skill for the full workflow.
+
+Use `lane new <name>` for an isolated worktree instead of editing `$HOME`-copied files in place. Note that this machine is **ext4 with no reflink support**, so a lane is a plain worktree — nothing ignored is cloned.
 
 ## Shell load order (`.bash_profile`)
 

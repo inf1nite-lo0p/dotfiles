@@ -73,3 +73,10 @@ nvm use default --silent >/dev/null 2>&1
 # 13. Enable auto-complete for just tasks
 source ~/.just-completion.bash
 complete -F _just -o default j
+
+# 14. lane — copy-on-write worktrees with durable notes
+# The wrapper makes `lane new|enter|exit|merge` cd for you. Guarded because
+# these dotfiles sync to machines that may not have the binary installed.
+if command -v lane >/dev/null 2>&1; then
+  eval "$(lane shellenv)"
+fi

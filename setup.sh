@@ -7,6 +7,8 @@ function doIt() {
 		--exclude "setup.sh" \
 		--exclude "README.md" \
 		--exclude "wsl/" \
+		--exclude ".lane/" \
+		--exclude "AGENTS.md" \
 		-avh --no-perms . ~;
 
 	ln -sf "$(pwd)/tmux.conf" ~/.tmux.conf
