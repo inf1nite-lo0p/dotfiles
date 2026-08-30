@@ -309,3 +309,11 @@
 
     # Change default branch name from `master` to `main`
     defaultBranch = main
+
+[include]
+
+    # Machine-local git config: personal identity, plus any per-directory identity
+    # overrides (see "Per-directory identities" in the README). Not tracked here, so
+    # no real name or address ships in this repo. Git skips a missing include path
+    # silently, so this stays a no-op until you create the file.
+    path = ~/.gitconfig.local

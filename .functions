@@ -708,3 +708,49 @@ EOF
 if command -v op-bin >/dev/null 2>&1; then
 	eval "$(op-bin shell-init bash)"
 fi
+
+# gh — route the GitHub CLI to a per-directory GitHub account.
+#
+# `gh auth switch` mutates one shared hosts.yml, which makes the active account
+# global mutable state: with several shells or agents running, one can flip the
+# account between the moment you switch and the moment your command runs, so the
+# command silently acts as the wrong user. GH_CONFIG_DIR is per-process instead —
+# this picks a config dir from $PWD and writes nothing global.
+#
+# Configure in ~/.extra, one "<path prefix>=<gh config dir>" per line:
+#
+#     export GH_ACCOUNT_ROOTS="$HOME/acme=$HOME/.config/gh-acme
+#     $HOME/other-org=$HOME/.config/gh-other"
+#
+# Populate each config dir with exactly one account, so that a stray `gh auth
+# switch` has nothing to switch to:
+#
+#     GH_CONFIG_DIR="$HOME/.config/gh-acme" gh auth login
+#
+# Unset GH_ACCOUNT_ROOTS means every call passes straight through, so this is inert
+# until configured. An explicit GH_CONFIG_DIR from the caller always wins.
+#
+# No --help block on purpose: arguments pass through untouched so `gh --help` still
+# reaches gh itself instead of being swallowed by this wrapper.
+gh() {
+	if [ -z "$GH_ACCOUNT_ROOTS" ] || [ -n "$GH_CONFIG_DIR" ]; then
+		command gh "$@"
+		return
+	fi
+
+	local line prefix dir
+	while IFS= read -r line; do
+		[ -n "$line" ] || continue
+		prefix="${line%%=*}"
+		dir="${line#*=}"
+		prefix="${prefix%/}"
+		case "$PWD/" in
+			"$prefix"/*)
+				GH_CONFIG_DIR="$dir" command gh "$@"
+				return
+				;;
+		esac
+	done <<< "$GH_ACCOUNT_ROOTS"
+
+	command gh "$@"
+}
